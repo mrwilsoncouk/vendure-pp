@@ -1,40 +1,45 @@
-# Stage 1: Build
-FROM node:20-alpine AS builder
+# Use official Node.js LTS image
+FROM node:20-bullseye AS builder
 
+# Set working directory
 WORKDIR /app
 
-# Install dependencies for building native modules
-RUN apk add --no-cache python3 make g++ bash git
+# Copy package files first for caching
+COPY package*.json ./
+COPY lerna.json ./
 
-# Copy root files
-COPY package.json package-lock.json lerna.json ./
-
-# Install root dependencies
-RUN npm install
-
-# Copy packages
+# Copy all packages
 COPY packages ./packages
 
-# Install dependencies in all packages
-RUN npx lerna exec -- npm install
+# Clean old node_modules (optional, safer in monorepo)
+RUN rm -rf node_modules \
+    && npx lerna exec -- rm -rf node_modules || true
 
-# Build all packages
+# Clean npm cache to prevent corrupted tarballs
+RUN npm cache clean --force
+
+# Install dependencies in all packages safely
+RUN npx lerna exec -- npm install --force --legacy-peer-deps
+
+# Bootstrap monorepo packages
+RUN npx lerna bootstrap --ci --force-local
+
+# Copy the rest of the project
+COPY . .
+
+# Build your packages (if required)
 RUN npx lerna run build
 
-# Stage 2: Production
-FROM node:20-alpine
+# Production image
+FROM node:20-bullseye-slim
 
 WORKDIR /app
 
-# Install minimal dependencies
-RUN apk add --no-cache bash
-
-# Copy built app from builder
+# Copy node_modules and built code from builder
 COPY --from=builder /app /app
 
-ENV NODE_ENV=production
-ENV PORT=3000
-
+# Expose your app port
 EXPOSE 3000
 
-CMD ["node", "packages/server/dist/index.js"]
+# Start your app (adjust to your start command)
+CMD ["npm", "run", "start:prod"]
