@@ -11,6 +11,7 @@ RUN apk add --no-cache python3 g++ make bash git
 # If you don't maintain package-lock.json, copy only package.json
 COPY package.json ./
 COPY packages/*/package.json ./packages/
+COPY lerna.json ./   # <-- ensure lerna.json is available inside /app
 
 # Clean npm cache and remove node_modules (safety)
 RUN rm -rf node_modules && npm cache clean --force
@@ -38,6 +39,7 @@ COPY --from=builder /app/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages ./packages
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/lerna.json ./   # <-- include lerna.json in production too if needed
 
 # Expose default Vendure port
 EXPOSE 3000
