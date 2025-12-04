@@ -1,45 +1,44 @@
-# Use official Node.js LTS image
-FROM node:20-bullseye AS builder
+# Use official Node LTS image
+FROM node:20-alpine AS builder
 
 # Set working directory
 WORKDIR /app
 
-# Copy package files first for caching
-COPY package*.json ./
-COPY lerna.json ./
+# Install build tools for native dependencies
+RUN apk add --no-cache python3 g++ make bash git
 
-# Copy all packages
-COPY packages ./packages
+# Copy only package files first for better caching
+COPY package.json package-lock.json ./
+COPY packages/*/package.json ./packages/
 
-# Clean old node_modules (optional, safer in monorepo)
-RUN rm -rf node_modules \
-    && npx lerna exec -- rm -rf node_modules || true
+# Clean npm cache and remove node_modules (safety)
+RUN rm -rf node_modules && npm cache clean --force
 
-# Clean npm cache to prevent corrupted tarballs
-RUN npm cache clean --force
+# Install dependencies safely
+RUN npm ci
 
-# Install dependencies in all packages safely
-RUN npx lerna exec -- npm install --force --legacy-peer-deps
+# Bootstrap Lerna workspaces
+RUN npx lerna bootstrap --hoist
 
-# Bootstrap monorepo packages
-RUN npx lerna bootstrap --ci --force-local
-
-# Copy the rest of the project
+# Copy the rest of the source code
 COPY . .
 
-# Build your packages (if required)
-RUN npx lerna run build
+# Build the project
+RUN npm run build
 
 # Production image
-FROM node:20-bullseye-slim
+FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Copy node_modules and built code from builder
-COPY --from=builder /app /app
+# Copy only needed files from builder
+COPY --from=builder /app/package.json /app/package-lock.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages ./packages
+COPY --from=builder /app/dist ./dist
 
-# Expose your app port
+# Expose default Vendure port
 EXPOSE 3000
 
-# Start your app (adjust to your start command)
-CMD ["npm", "run", "start:prod"]
+# Default command
+CMD ["node", "dist/apps/server/main.js"]
