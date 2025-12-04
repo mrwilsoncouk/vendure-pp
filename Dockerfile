@@ -8,20 +8,19 @@ WORKDIR /app
 RUN apk add --no-cache python3 g++ make bash git
 
 # Copy only package files first for caching optimization
-# If you don't maintain package-lock.json, copy only package.json
-COPY package.json ./
+COPY package.json ./package.json
 COPY packages/*/package.json ./packages/
-COPY lerna.json ./   # <-- ensure lerna.json is available inside /app
+COPY lerna.json ./lerna.json   # <-- explicit path avoids lstat error
 
 # Clean npm cache and remove node_modules (safety)
 RUN rm -rf node_modules && npm cache clean --force
 
 # Install dependencies safely, ignoring peer conflicts
-# Use npm install instead of npm ci (ci requires a lockfile)
 RUN npm install --legacy-peer-deps
 
-# Bootstrap Lerna workspaces with hoisting
-RUN npx lerna bootstrap --hoist
+# If you still need Lerna bootstrap, keep this line.
+# Otherwise comment/remove it and rely on npm workspaces.
+# RUN npx lerna bootstrap --hoist
 
 # Copy the rest of the source code
 COPY . .
@@ -35,11 +34,11 @@ FROM node:20-alpine AS production
 WORKDIR /app
 
 # Copy only the necessary files from builder
-COPY --from=builder /app/package.json ./
+COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages ./packages
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/lerna.json ./   # <-- include lerna.json in production too if needed
+COPY --from=builder /app/lerna.json ./lerna.json   # <-- include if runtime tools expect it
 
 # Expose default Vendure port
 EXPOSE 3000
