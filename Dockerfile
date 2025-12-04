@@ -1,33 +1,27 @@
-# Step 1: Build stage
+# Stage 1: Build the app
 FROM node:20-alpine AS builder
-
 WORKDIR /app
 
-# Copy package files
+# Copy main package files
 COPY package.json package-lock.json lerna.json ./
+
+# Install root dependencies
+RUN npm install
+
+# Copy all packages
 COPY packages ./packages
 
-# Install dependencies and bootstrap Lerna
-RUN npm install
-RUN npx lerna bootstrap
+# Install dependencies in all packages
+RUN npx lerna exec -- npm install
 
 # Build all packages
 RUN npx lerna run build
 
-# Step 2: Production stage
+# Stage 2: Production image
 FROM node:20-alpine
-
 WORKDIR /app
-
-# Copy built files from builder
 COPY --from=builder /app /app
-
-# Environment variables (set via Northflank later)
 ENV NODE_ENV=production
 ENV PORT=3000
-
-# Expose the port
 EXPOSE 3000
-
-# Start Vendure backend
 CMD ["node", "packages/server/dist/index.js"]
