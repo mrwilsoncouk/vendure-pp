@@ -45,4 +45,3 @@ EXPOSE 3000
 
 # Default command
 CMD ["node", "dist/apps/server/main.js"]
-# dummy commit to trigger build
