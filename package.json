@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "engines": {
-    "node": ">= 18"
+    "node": ">=18"
   },
   "homepage": "https://www.vendure.io",
   "repository": {
@@ -11,6 +11,7 @@
     "url": "https://github.com/vendure-ecommerce/vendure"
   },
   "scripts": {
+    "prepare": "lerna bootstrap --hoist",
     "watch": "lerna run watch --parallel",
     "watch:core-common": "lerna run --scope @vendure/common --scope @vendure/core watch --parallel",
     "build:core-common": "lerna run --scope @vendure/common --scope @vendure/core build",
@@ -63,7 +64,6 @@
     "unplugin-swc": "^1.4.4",
     "vitest": "^3.2.4"
   },
-  "//": "Fix for https://github.com/npm/cli/issues/4828",
   "optionalDependencies": {
     "@nx/nx-darwin-arm64": "17.2.8",
     "@nx/nx-darwin-x64": "17.2.8",
