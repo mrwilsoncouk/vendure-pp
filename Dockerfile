@@ -1,4 +1,4 @@
-'# Use official Node LTS image
+# Use official Node LTS image
 FROM node:20-alpine AS builder
 
 # Set working directory
