@@ -1,3 +1,6 @@
+ARG CACHEBUST=1
+RUN echo $CACHEBUST
+
 # Use official Node LTS image
 FROM node:20-alpine AS builder
 
